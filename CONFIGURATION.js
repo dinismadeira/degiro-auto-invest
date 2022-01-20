@@ -16,7 +16,7 @@ module.exports = {
     // Day to buy (won't buy before this day)
     DAY: 1,
     
-    // Minimum value above the current price you want to set your bid
-    // It will be higher if your balance allows it
-    MIN_BID: 0.05
+    // Value above the current price you want to set your bid
+    // Must be a multiple of tick size
+    MIN_BID: 0.06
 };
