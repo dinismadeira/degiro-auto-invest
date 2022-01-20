@@ -4,8 +4,8 @@
     const init = Date.now();
     
     const fs = require('fs');
-	const pp = require('./modules/pp'); // puppeteer utils
-	const conf = require('./CONFIGURATION');
+    const pp = require('./modules/pp'); // puppeteer utils
+    const conf = require('./CONFIGURATION');
     
     const LAST_MONTH_FILE = "LAST_MONTH.txt";
     const currentMonth = new Date().getMonth();
@@ -19,9 +19,11 @@
         return Number(s.replace(/\D/g, '')) / 100;
     };
     
-    const typeText = async (page, selector, text) => {
+    const rand = (min, max) => Math.floor(Math.random() * (max - min) ) + min;
+    
+    const typeText = async (page, selector, text, delay = 0) => {
         await page.waitForSelector(selector);
-        return page.type(selector, String(text));
+        return page.type(selector, String(text), {delay: delay});
     };
     
     const evalElement = async (page, selector, f) => {
@@ -37,7 +39,7 @@
     else if (day < conf.DAY) {
         console.log("Too soon to buy this month.");
     }
-    else if (lastMonth == currentMonth) {
+    else if (lastMonth === currentMonth) {
         console.log("Already bought this month.");
     }
     else {
@@ -49,53 +51,53 @@
             await pp.load(page, "https://trader.degiro.nl/login/#/login");
             await typeText(page, '#username', conf.USERNAME);
             await typeText(page, '#password', conf.PASSWORD);
-            await pp.sleep(1000);
+            await pp.sleep(rand(1000, 3000));
+            await pp.clickVisible(page, "*[name='loginButtonUniversal']");
 
             // authenticator
             if (conf.SECRET) {
-                await pp.clickVisible(page, "*[name='loginButtonUniversal']");
+                await pp.sleep(rand(2000, 4000));
                 const totp = require("totp-generator");
                 const token = totp(conf.SECRET);
-                await typeText(page, "input[name='oneTimePassword']", token);
-                await pp.sleep(1000);
+                await typeText(page, "input[name='oneTimePassword']", token, 500);
+                await pp.sleep(rand(500, 1000));
                 await pp.submit(page, "button[type='submit']");
             }
-            else await pp.submit(page, "*[name='loginButtonUniversal']");
             
             // get balance
             const availableToSpend = parseMoney(await evalElement(page, "span[data-field='availableToSpend']", e => e.innerText));
             console.log("balance:", availableToSpend);
             
             // go to product page
+            await pp.sleep(rand(2500, 5000));
             await pp.load(page, conf.PRODUCT);
             
             // get price
             const price = parseMoney(await evalElement(page, "span[data-field='CurrentPrice']", e => e.innerText));
             
             // calculate min bid
-            const minBid = price + conf.MIN_BID;
+            const bid = (price + conf.MIN_BID).toFixed(2);
             
             // calculate how many units can we buy with the min bid
-            const quantity = Math.floor(availableToSpend / minBid);
-            
-            // calculate the maximum bid our balance allows us to set for this quantity
-            const bid = Math.floor(availableToSpend / quantity);
+            const quantity = Math.floor(availableToSpend / bid);
             
             console.log("price:", price);
             console.log("bid:", bid);
             console.log("quantity to buy:", quantity);
             
             // buy
-            await pp.sleep(1000);
+            await pp.sleep(rand(1000, 3000));
             console.log("Buy...");
             await pp.clickVisible(page, "button[data-action='buy']");
-            await typeText(page, "input[name='limit']", bid);
-            await typeText(page, "input[name='number']", quantity);
+            await pp.sleep(rand(1000, 3000));
+            await typeText(page, "input[name='limit']", bid, rand(200, 400));
+            await pp.sleep(rand(1000, 2000));
+            await typeText(page, "input[name='number']", quantity, rand(200, 400));
             if (quantity) {
-                await pp.sleep(1000);
+                await pp.sleep(rand(1000, 3000));
                 console.log("Place Order...");
                 await pp.clickVisible(page, "button[type='submit']"); // order
-                await pp.sleep(1000);
+                await pp.sleep(rand(1000, 3000));
                 console.log("Confirm...");
                 await pp.clickVisible(page, "button.duvfw-AB._1dhmoJtM"); // confirm
                 console.log("Done!");
